@@ -1,46 +1,35 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
-const nunjucks = require('nunjucks');
+const express = require('express');
+const axios = require('axios');
 
-var indexRouter = require('./routes/index');
-// var usersRouter = require('./routes/users');
+const app = express();
+const PORT = 3000;
 
-var app = express();
-
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'njk');
-nunjucks.configure('views', { 
-  express: app,
-  watch: true,
-});
-
-app.use(logger('dev'));
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-// app.use('/users', usersRouter);
+app.get('/kakao-map-api', async (req, res) => {
+    const keyword = req.query.query;
+    const kakaoApiKey = 'f32e49f5dedd2c37722a3d4f1ada6317'; // 실제 사용하는 API 키로 변경
 
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
+    // 지역 검색 API URL로 수정
+    const apiUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(keyword)}`;
+    
+    try {
+        const response = await axios.get(apiUrl, {
+            headers: { 'Authorization': `KakaoAK ${kakaoApiKey}` }
+        });
+        res.send(response.data);
+    } catch (error) {
+      console.error(error);
+      if (error.response) {
+          // 서버가 응답한 상태 코드와 메시지가 있다면 그것을 사용
+          res.status(error.response.status).send(error.response.data);
+      } else {
+          // 기타 네트워크 오류 등의 경우
+          res.status(500).send('Internal Server Error');
+      }
+  }
 });
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+app.listen(PORT, () => {
+    console.log(`서버가 http://localhost:${PORT}에서 실행 중입니다.`);
 });
-
-module.exports = app;
